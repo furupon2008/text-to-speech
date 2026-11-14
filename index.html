@@ -3,662 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト読み上げアプリ (Text-to-Speech)</title>
-    <!-- Tailwind CSSの読み込み -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts (Inter & Noto Sans JP) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Phosphor Icons (アイコン用) -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <!-- MP3エンコード用ライブラリ (lamejs) -->
-    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+    <title>テキスト読み上げツール</title>
     <style>
         body {
-            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
         }
-        /* カスタムレンジスライダーのスタイル微調整 */
-        input[type="range"] {
-            accent-color: #4f46e5;
+        h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            resize: vertical;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        button {
+            padding: 10px 18px;
+            font-size: 15px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #0066cc;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .settings {
+            margin-top: 15px;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        select, input[type="range"] {
+            width: 65%;
+            padding: 5px;
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex items-center justify-center p-4 sm:p-6">
+<body>
 
-    <!-- メインコンテナ -->
-    <main class="w-full max-w-2xl bg-white rounded-2xl shadow-lg border border-slate-200/80 overflow-hidden">
+    <div class="card">
+        <h2>テキスト読み上げツール</h2>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">テキストを入力してボタンを押すと、ブラウザが音声を読み上げます。</p>
         
-        <!-- ヘッダー -->
-        <header class="bg-indigo-600 text-white px-6 py-5 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="bg-white/20 p-2 rounded-xl">
-                    <i class="ph ph-speaker-high text-2xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold tracking-tight">テキスト読み上げツール</h1>
-                    <p class="text-indigo-100 text-xs mt-0.5">Web Speech API (Speech Synthesis) を使用</p>
-                </div>
-            </div>
-            <!-- ステータスバッジ -->
-            <span id="statusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/50 text-white border border-indigo-400/30">
-                <span id="statusDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span id="statusText">待機中</span>
-            </span>
-        </header>
-
-        <!-- コンテンツエリア -->
-        <div class="p-6 space-y-6">
-            
-            <!-- ブラウザ非対応時の警告メッセージ（初期は非表示） -->
-            <div id="unsupportedAlert" class="hidden bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r-lg text-sm" role="alert">
-                <p class="font-bold">お使いのブラウザは音声合成に対応していません</p>
-                <p class="mt-1">Google Chrome、Microsoft Edge、Safari などの最新ブラウザでお試しください。</p>
-            </div>
-
-            <!-- 通知・エラーメッセージ表示用ボックス -->
-            <div id="messageBox" class="hidden bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm flex items-center justify-between">
-                <span id="messageText"></span>
-                <button onclick="hideMessage()" class="text-amber-600 hover:text-amber-800 p-1">
-                    <i class="ph ph-x text-lg"></i>
-                </button>
-            </div>
-
-            <!-- テキスト入力エリア -->
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <label for="textInput" class="block text-sm font-semibold text-slate-700">
-                        読み上げるテキスト
-                    </label>
-                    <button id="clearBtn" type="button" class="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-slate-100">
-                        <i class="ph ph-trash"></i> クリア
-                    </button>
-                </div>
-                <textarea 
-                    id="textInput" 
-                    rows="5" 
-                    class="w-full rounded-xl border border-slate-300 p-4 text-slate-800 text-base leading-relaxed focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all resize-y"
-                    placeholder="ここに読み上げたい文章を入力してください..."
-                >こんにちは！これはブラウザの標準機能（Speech Synthesis API）を使ったテキスト読み上げアプリです。下の設定から、声の種類や話すスピード、声の高さを自由にカスタマイズして試してみてくださいね。</textarea>
-                <div class="flex justify-end text-xs text-slate-400">
-                    <span id="charCount">0</span> 文字
-                </div>
-            </div>
-
-            <!-- 音声設定セクション -->
-            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200/70 space-y-5">
-                
-                <!-- 話者（声の種類）選択 -->
-                <div class="space-y-1.5">
-                    <label for="voiceSelect" class="block text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                        <i class="ph ph-user-sound text-indigo-600 text-lg"></i>
-                        話者（声の種類）
-                    </label>
-                    <div class="relative">
-                        <select 
-                            id="voiceSelect" 
-                            class="w-full appearance-none rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-sm text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer"
-                        >
-                            <option value="">音声を読み込み中...</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-                            <i class="ph ph-caret-down"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- スライダー群（速度・高さ） -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1">
-                    
-                    <!-- 読み上げ速度 (Rate) -->
-                    <div class="space-y-2">
-                        <div class="flex justify-between items-center">
-                            <label for="rateRange" class="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                                <i class="ph ph-gauge text-indigo-600 text-lg"></i>
-                                読み上げ速度
-                            </label>
-                            <span id="rateValue" class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-md">1.0x</span>
-                        </div>
-                        <input 
-                            type="range" 
-                            id="rateRange" 
-                            min="0.5" 
-                            max="2.0" 
-                            step="0.1" 
-                            value="1.0" 
-                            class="w-full h-2 bg-slate-200 rounded-lg cursor-pointer"
-                        >
-                        <div class="flex justify-between text-[11px] text-slate-400">
-                            <span>遅い (0.5)</span>
-                            <span>標準 (1.0)</span>
-                            <span>速い (2.0)</span>
-                        </div>
-                    </div>
-
-                    <!-- 声の高さ (Pitch) -->
-                    <div class="space-y-2">
-                        <div class="flex justify-between items-center">
-                            <label for="pitchRange" class="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                                <i class="ph ph-music-notes-simple text-indigo-600 text-lg"></i>
-                                声の高さ
-                            </label>
-                            <span id="pitchValue" class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-md">1.0</span>
-                        </div>
-                        <input 
-                            type="range" 
-                            id="pitchRange" 
-                            min="0.5" 
-                            max="2.0" 
-                            step="0.1" 
-                            value="1.0" 
-                            class="w-full h-2 bg-slate-200 rounded-lg cursor-pointer"
-                        >
-                        <div class="flex justify-between text-[11px] text-slate-400">
-                            <span>低い (0.5)</span>
-                            <span>標準 (1.0)</span>
-                            <span>高い (2.0)</span>
-                        </div>
-                    </div>
-
-                </div>
-                
-                <!-- 設定リセットボタン -->
-                <div class="flex justify-end pt-1">
-                    <button id="resetSettingsBtn" type="button" class="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1 transition-colors">
-                        <i class="ph ph-arrow-counter-clockwise"></i> 速度と高さを標準に戻す
-                    </button>
-                </div>
-            </div>
-
-            <!-- コントロールボタン群 -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                <!-- 読み上げ開始 -->
-                <button 
-                    id="playBtn" 
-                    type="button" 
-                    class="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 px-4 rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <i class="ph-fill ph-play text-lg"></i>
-                    <span>読み上げ</span>
-                </button>
-
-                <!-- 一時停止 -->
-                <button 
-                    id="pauseBtn" 
-                    type="button" 
-                    disabled
-                    class="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold py-3 px-4 rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                    <i class="ph-fill ph-pause text-lg"></i>
-                    <span>一時停止</span>
-                </button>
-
-                <!-- 再開 -->
-                <button 
-                    id="resumeBtn" 
-                    type="button" 
-                    disabled
-                    class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold py-3 px-4 rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                    <i class="ph-fill ph-play-pause text-lg"></i>
-                    <span>再開</span>
-                </button>
-
-                <!-- 停止 -->
-                <button 
-                    id="stopBtn" 
-                    type="button" 
-                    disabled
-                    class="flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-semibold py-3 px-4 rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                    <i class="ph-fill ph-stop text-lg"></i>
-                    <span>停止</span>
-                </button>
-            </div>
-
-            <!-- MP3ダウンロードセクション -->
-            <div class="pt-3 border-t border-slate-200/80">
-                <button 
-                    id="downloadBtn" 
-                    type="button" 
-                    class="w-full flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-900 active:bg-black text-white font-semibold py-3.5 px-5 rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <i id="downloadIcon" class="ph-bold ph-download-simple text-lg text-indigo-400"></i>
-                    <span id="downloadBtnText">MP3ファイルとしてダウンロード</span>
-                </button>
-                <p class="text-[11px] text-slate-400 text-center mt-2">
-                    ※入力したテキストの音声データを生成し、MP3形式で端末に保存します
-                </p>
-            </div>
-
+        <textarea id="textInput" placeholder="ここに読み上げたいテキストを入力してね...">こんにちは！GitHub Pagesでもバッチリ動くテキスト読み上げツールだよ。</textarea>
+        
+        <div class="controls">
+            <button onclick="speakText()">読み上げる</button>
+            <button onclick="stopSpeech()" style="background-color: #cc3333;">停止</button>
         </div>
-    </main>
+
+        <div class="settings">
+            <label>
+                話者（声の種類）:
+                <select id="voiceSelect"></select>
+            </label>
+            <label>
+                読み上げ速度: <span id="rateVal">1.0</span>倍
+                <input type="range" id="rateRange" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('rateVal').innerText = this.value">
+            </label>
+            <label>
+                声の高さ: <span id="pitchVal">1.0</span>
+                <input type="range" id="pitchRange" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('pitchVal').innerText = this.value">
+            </label>
+        </div>
+    </div>
 
     <script>
-        // DOM要素の取得
-        const textInput = document.getElementById('textInput');
-        const charCount = document.getElementById('charCount');
-        const clearBtn = document.getElementById('clearBtn');
-        const voiceSelect = document.getElementById('voiceSelect');
-        const rateRange = document.getElementById('rateRange');
-        const rateValue = document.getElementById('rateValue');
-        const pitchRange = document.getElementById('pitchRange');
-        const pitchValue = document.getElementById('pitchValue');
-        const resetSettingsBtn = document.getElementById('resetSettingsBtn');
-
-        const playBtn = document.getElementById('playBtn');
-        const pauseBtn = document.getElementById('pauseBtn');
-        const resumeBtn = document.getElementById('resumeBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const downloadIcon = document.getElementById('downloadIcon');
-        const downloadBtnText = document.getElementById('downloadBtnText');
-
-        const statusBadge = document.getElementById('statusBadge');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const unsupportedAlert = document.getElementById('unsupportedAlert');
-        const messageBox = document.getElementById('messageBox');
-        const messageText = document.getElementById('messageText');
-
-        // SpeechSynthesis APIの初期化と状態管理
         const synth = window.speechSynthesis;
         let voices = [];
-        let isPaused = false;
 
-        // ブラウザのサポート確認
-        if (!('speechSynthesis' in window)) {
-            unsupportedAlert.classList.remove('hidden');
-            playBtn.disabled = true;
-        }
-
-        // メッセージ表示用ヘルパー関数
-        function showMessage(msg) {
-            messageText.textContent = msg;
-            messageBox.classList.remove('hidden');
-        }
-
-        function hideMessage() {
-            messageBox.classList.add('hidden');
-        }
-
-        // 文字数カウントの更新
-        function updateCharCount() {
-            charCount.textContent = textInput.value.length;
-        }
-        textInput.addEventListener('input', updateCharCount);
-        updateCharCount(); // 初期カウント実行
-
-        // テキストクリアボタン
-        clearBtn.addEventListener('click', () => {
-            stopSpeech();
-            textInput.value = '';
-            updateCharCount();
-            textInput.focus();
-        });
-
-        // 利用可能な音声リストを取得してプルダウンに反映する関数
         function populateVoiceList() {
-            voices = synth.getVoices();
-            if (voices.length === 0) return;
-
-            // 現在選択されている音声の名前を保持（再読み込み時のため）
-            const selectedVoiceName = voiceSelect.selectedOptions[0]?.getAttribute('data-name');
-            voiceSelect.innerHTML = '';
-
-            // 日本語の音声をリストの上部に優先表示するためソート
-            const sortedVoices = [...voices].sort((a, b) => {
-                const aIsJa = a.lang.includes('ja') || a.lang.includes('JP');
-                const bIsJa = b.lang.includes('ja') || b.lang.includes('JP');
-                if (aIsJa && !bIsJa) return -1;
-                if (!aIsJa && bIsJa) return 1;
-                return a.name.localeCompare(b.name);
+            voices = synth.getVoices().sort((a, b) => {
+                const aLang = a.lang.includes('ja') ? -1 : 1;
+                const bLang = b.lang.includes('ja') ? -1 : 1;
+                return aLang - bLang;
             });
-
-            let defaultJapaneseIndex = -1;
-
-            sortedVoices.forEach((voice, index) => {
+            const voiceSelect = document.getElementById('voiceSelect');
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice, i) => {
                 const option = document.createElement('option');
                 option.textContent = `${voice.name} (${voice.lang})`;
+                if (voice.default) option.textContent += ' — DEFAULT';
                 option.setAttribute('data-lang', voice.lang);
                 option.setAttribute('data-name', voice.name);
-
-                if (voice.default) {
-                    option.textContent += ' [デフォルト]';
-                }
-
-                // 最初の日本語音声のインデックスを記録
-                if (defaultJapaneseIndex === -1 && (voice.lang.includes('ja') || voice.lang.includes('JP'))) {
-                    defaultJapaneseIndex = index;
-                }
-
                 voiceSelect.appendChild(option);
             });
-
-            // 以前の選択を復元するか、デフォルトで日本語音声を選択
-            if (selectedVoiceName) {
-                for (let i = 0; i < voiceSelect.options.length; i++) {
-                    if (voiceSelect.options[i].getAttribute('data-name') === selectedVoiceName) {
-                        voiceSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-            } else if (defaultJapaneseIndex !== -1) {
-                voiceSelect.selectedIndex = defaultJapaneseIndex;
-            }
         }
 
-        // 音声リストの読み込みイベント（Chromeなどでは非同期で読み込まれるため必須）
         populateVoiceList();
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = populateVoiceList;
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = populateVoiceList;
         }
 
-        // スライダーの値表示更新
-        rateRange.addEventListener('input', () => {
-            rateValue.textContent = `${parseFloat(rateRange.value).toFixed(1)}x`;
-        });
+        function speakText() {
+            const text = document.getElementById('textInput').value;
+            if (!text) return;
 
-        pitchRange.addEventListener('input', () => {
-            pitchValue.textContent = parseFloat(pitchRange.value).toFixed(1);
-        });
+            synth.cancel(); // 既存の読み上げを停止
 
-        // 設定リセットボタン
-        resetSettingsBtn.addEventListener('click', () => {
-            rateRange.value = '1.0';
-            pitchRange.value = '1.0';
-            rateValue.textContent = '1.0x';
-            pitchValue.textContent = '1.0';
-        });
-
-        // UIのボタン状態とステータス表示を更新する関数
-        function updateUIState(state) {
-            switch (state) {
-                case 'playing':
-                    statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
-                    statusText.textContent = '読み上げ中';
-                    playBtn.disabled = false;
-                    pauseBtn.disabled = false;
-                    resumeBtn.disabled = true;
-                    stopBtn.disabled = false;
-                    break;
-                case 'paused':
-                    statusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
-                    statusText.textContent = '一時停止中';
-                    playBtn.disabled = false;
-                    pauseBtn.disabled = true;
-                    resumeBtn.disabled = false;
-                    stopBtn.disabled = false;
-                    break;
-                case 'idle':
-                default:
-                    statusDot.className = 'w-2 h-2 rounded-full bg-slate-300';
-                    statusText.textContent = '待機中';
-                    playBtn.disabled = false;
-                    pauseBtn.disabled = true;
-                    resumeBtn.disabled = true;
-                    stopBtn.disabled = true;
-                    isPaused = false;
-                    break;
+            const utterance = new SpeechSynthesisUtterance(text);
+            const selectedOption = document.getElementById('voiceSelect').selectedOptions[0];
+            if (selectedOption) {
+                const voiceName = selectedOption.getAttribute('data-name');
+                utterance.voice = voices.find(v => v.name === voiceName);
             }
+
+            utterance.rate = parseFloat(document.getElementById('rateRange').value);
+            utterance.pitch = parseFloat(document.getElementById('pitchRange').value);
+
+            synth.speak(utterance);
         }
 
-        // 読み上げ開始処理
-        function startSpeech() {
-            hideMessage();
-            const text = textInput.value.trim();
-
-            if (!text) {
-                showMessage('読み上げるテキストを入力してください。');
-                textInput.focus();
-                return;
-            }
-
-            // すでに再生中または一時停止中の場合は一度キャンセルして最初から再生
-            if (synth.speaking || synth.paused) {
-                synth.cancel();
-            }
-
-            try {
-                const utterance = new SpeechSynthesisUtterance(text);
-
-                // 選択された話者を設定
-                const selectedOption = voiceSelect.selectedOptions[0];
-                if (selectedOption) {
-                    const selectedVoiceName = selectedOption.getAttribute('data-name');
-                    const selectedVoice = voices.find(v => v.name === selectedVoiceName);
-                    if (selectedVoice) {
-                        utterance.voice = selectedVoice;
-                    }
-                }
-
-                // 速度と声の高さを設定
-                utterance.rate = parseFloat(rateRange.value);
-                utterance.pitch = parseFloat(pitchRange.value);
-
-                // イベントリスナーの設定
-                utterance.onstart = () => {
-                    isPaused = false;
-                    updateUIState('playing');
-                };
-
-                utterance.onend = () => {
-                    updateUIState('idle');
-                };
-
-                utterance.onerror = (event) => {
-                    // ユーザーによるキャンセル操作（interrupted/canceled）以外のエラーを表示
-                    if (event.error !== 'interrupted' && event.error !== 'canceled') {
-                        console.error('SpeechSynthesisUtterance Error:', event);
-                        showMessage(`音声の再生中にエラーが発生しました (${event.error})。`);
-                    }
-                    updateUIState('idle');
-                };
-
-                // 読み上げ実行
-                synth.speak(utterance);
-            } catch (error) {
-                console.error('Speech synthesis failed:', error);
-                showMessage('音声合成の実行に失敗しました。');
-                updateUIState('idle');
-            }
-        }
-
-        // 一時停止処理
-        function pauseSpeech() {
-            if (synth.speaking && !synth.paused) {
-                synth.pause();
-                isPaused = true;
-                updateUIState('paused');
-            }
-        }
-
-        // 再開処理
-        function resumeSpeech() {
-            if (synth.paused || isPaused) {
-                synth.resume();
-                isPaused = false;
-                updateUIState('playing');
-            }
-        }
-
-        // 停止処理
         function stopSpeech() {
-            if (synth.speaking || synth.paused) {
-                synth.cancel();
-            }
-            updateUIState('idle');
+            synth.cancel();
         }
-
-        // 各ボタンのクリックイベント登録
-        playBtn.addEventListener('click', startSpeech);
-        pauseBtn.addEventListener('click', pauseSpeech);
-        resumeBtn.addEventListener('click', resumeSpeech);
-        stopBtn.addEventListener('click', stopSpeech);
-
-        // ==========================================
-        // MP3生成・ダウンロード機能 (Gemini TTS + lamejs)
-        // ==========================================
-        const apiKey = ""; // 実行環境から自動提供されるAPIキー
-
-        // 選択された話者名からGeminiのボイス名（女性声・男性声）を判定するヘルパー
-        function resolveGeminiVoice() {
-            const selectedText = voiceSelect.selectedOptions[0]?.textContent || '';
-            // 男性系のボイス名が選ばれている場合は男性ボイス(Puck/Charon)、それ以外は日本語に自然な女性ボイス(Aoede/Kore)を選択
-            if (/Ichiro|Keita|Naoki|Male|男|David|Mark|Guy/i.test(selectedText)) {
-                return 'Puck';
-            }
-            return 'Aoede';
-        }
-
-        // Base64文字列をInt16Array（PCMデータ）に変換
-        function base64ToInt16Array(base64) {
-            const binaryString = window.atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return new Int16Array(bytes.buffer);
-        }
-
-        // PCMデータをlamejsを使ってMP3 Blobにエンコード
-        function encodePcmToMp3(pcmSamples, sampleRate) {
-            const mp3encoder = new lamejs.Mp3Encoder(1, sampleRate, 128); // モノラル, サンプルレート, 128kbps
-            const mp3Data = [];
-            const sampleBlockSize = 1152;
-
-            for (let i = 0; i < pcmSamples.length; i += sampleBlockSize) {
-                const sampleChunk = pcmSamples.subarray(i, i + sampleBlockSize);
-                const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
-                if (mp3buf.length > 0) {
-                    mp3Data.push(mp3buf);
-                }
-            }
-            const mp3buf = mp3encoder.flush();
-            if (mp3buf.length > 0) {
-                mp3Data.push(mp3buf);
-            }
-            return new Blob(mp3Data, { type: 'audio/mp3' });
-        }
-
-        // 指数バックオフ付きAPI呼び出し
-        async function fetchWithRetry(url, options, maxRetries = 4) {
-            let delay = 1000;
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) {
-                        throw new Error(`HTTP Error: ${response.status}`);
-                    }
-                    return await response.json();
-                } catch (err) {
-                    if (i === maxRetries - 1) throw err;
-                    await new Promise(res => setTimeout(res, delay));
-                    delay *= 2;
-                }
-            }
-        }
-
-        // MP3ダウンロード処理
-        async function downloadMp3() {
-            hideMessage();
-            const text = textInput.value.trim();
-
-            if (!text) {
-                showMessage('ダウンロードするテキストを入力してください。');
-                textInput.focus();
-                return;
-            }
-
-            // ローディング状態へ切り替え
-            downloadBtn.disabled = true;
-            downloadIcon.className = 'ph-bold ph-spinner animate-spin text-lg text-indigo-400';
-            downloadBtnText.textContent = 'MP3音声を生成中...';
-
-            try {
-                const voiceName = resolveGeminiVoice();
-                const rate = parseFloat(rateRange.value);
-                const pitch = parseFloat(pitchRange.value);
-
-                // スライダーの速度・声の高さ設定を自然な指示文に反映
-                let styleNote = '';
-                if (rate > 1.1) styleNote += 'やや早口で、';
-                else if (rate < 0.9) styleNote += 'ゆっくりと丁寧に、';
-                if (pitch > 1.1) styleNote += '少し高めの明るい声で、';
-                else if (pitch < 0.9) styleNote += '少し低めの落ち着いた声で、';
-
-                const promptText = styleNote 
-                    ? `次の文章を${styleNote}自然に読み上げてください：\n${text}`
-                    : text;
-
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-                const payload = {
-                    contents: [{ parts: [{ text: promptText }] }],
-                    generationConfig: {
-                        responseModalities: ["AUDIO"],
-                        speechConfig: {
-                            voiceConfig: {
-                                prebuiltVoiceConfig: {
-                                    voiceName: voiceName
-                                }
-                            }
-                        }
-                    }
-                };
-
-                const result = await fetchWithRetry(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const inlineData = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-                if (!inlineData || !inlineData.data) {
-                    throw new Error('音声データの取得に失敗しました。');
-                }
-
-                // mimeType（例: "audio/L16;codec=pcm;rate=24000"）からサンプルレートを抽出
-                const rateMatch = (inlineData.mimeType || '').match(/rate=(\d+)/);
-                const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-
-                // PCMデータをMP3形式にエンコード
-                const pcmSamples = base64ToInt16Array(inlineData.data);
-                const mp3Blob = encodePcmToMp3(pcmSamples, sampleRate);
-
-                // ダウンロードリンクを生成して自動クリック
-                const downloadUrl = URL.createObjectURL(mp3Blob);
-                const a = document.createElement('a');
-                const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
-                a.href = downloadUrl;
-                a.download = `voice_${timestamp}.mp3`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-
-            } catch (error) {
-                console.error('MP3 Generation Error:', error);
-                showMessage('MP3の生成に失敗しました。しばらく待ってから再度お試しください。');
-            } finally {
-                // ボタンを元の状態に戻す
-                downloadBtn.disabled = false;
-                downloadIcon.className = 'ph-bold ph-download-simple text-lg text-indigo-400';
-                downloadBtnText.textContent = 'MP3ファイルとしてダウンロード';
-            }
-        }
-
-        downloadBtn.addEventListener('click', downloadMp3);
-
-        // ページを離れる・リロードする際に音声を停止（バックグラウンドで鳴り続けるのを防止）
-        window.addEventListener('beforeunload', () => {
-            if (synth.speaking) {
-                synth.cancel();
-            }
-        });
-
-        // 初期UI状態の設定
-        updateUIState('idle');
     </script>
+
 </body>
 </html>
