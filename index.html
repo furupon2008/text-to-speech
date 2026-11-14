@@ -3,22 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テキスト読み上げ＆WAVダウンロード</title>
+    <title>音声読み上げ ＆ WAVダウンロード</title>
     <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-sub: #64748b;
-            --border: #e2e8f0;
-        }
-
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            font-family: sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -26,139 +16,63 @@
             align-items: center;
             min-height: 100vh;
         }
-
         .container {
             width: 100%;
             max-width: 600px;
-            background: var(--card-bg);
+            background: #ffffff;
             padding: 24px;
             border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-
         h1 {
             font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 16px;
             text-align: center;
-            color: var(--text-main);
+            margin-bottom: 16px;
         }
-
         .input-group {
             margin-bottom: 16px;
         }
-
         label {
             display: block;
             font-size: 0.875rem;
-            font-weight: 600;
+            font-weight: bold;
             margin-bottom: 6px;
-            color: var(--text-sub);
+            color: #64748b;
         }
-
         textarea {
             width: 100%;
-            height: 120px;
-            padding: 12px;
-            border: 1px solid var(--border);
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
             font-size: 1rem;
-            resize: vertical;
             box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.2s;
         }
-
-        textarea:focus {
-            border-color: var(--primary);
-        }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
         select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
+            padding: 8px;
             border-radius: 8px;
-            font-size: 0.9rem;
-            background: #fff;
-            outline: none;
+            border: 1px solid #e2e8f0;
         }
-
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        input[type="range"] {
-            flex: 1;
-        }
-
-        .value-display {
-            font-size: 0.875rem;
-            color: var(--text-sub);
-            width: 40px;
-            text-align: right;
-        }
-
         .btn-group {
             display: flex;
             gap: 8px;
             margin-bottom: 16px;
         }
-
         button {
             flex: 1;
-            padding: 10px 16px;
+            padding: 10px;
             border: none;
             border-radius: 8px;
             font-size: 0.95rem;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s, opacity 0.2s;
         }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background-color: var(--primary-hover);
-        }
-
-        .btn-secondary {
-            background-color: #e2e8f0;
-            color: var(--text-main);
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background-color: #cbd5e1;
-        }
-
-        .download-section {
-            border-top: 1px solid var(--border);
-            padding-top: 16px;
-        }
-
-        .status {
-            font-size: 0.85rem;
-            color: var(--text-sub);
-            text-align: center;
-            margin-top: 8px;
-            min-height: 1.2em;
-        }
+        .btn-play { background-color: #4f46e5; color: white; }
+        .btn-other { background-color: #e2e8f0; color: #1e293b; }
+        .btn-download { background-color: #059669; color: white; width: 100%; padding: 12px; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status { font-size: 0.85rem; text-align: center; margin-top: 8px; color: #64748b; }
     </style>
 </head>
 <body>
@@ -168,31 +82,22 @@
 
     <div class="input-group">
         <label for="textInput">読み上げるテキスト</label>
-        <textarea id="textInput" placeholder="ここに読み上げたい文章を入力してください...">GitHub Pagesで確実に動く、音声読み上げとWAVファイルダウンロードのアプリです。</textarea>
+        <textarea id="textInput">GitHub Pagesで確実に動く、WAVダウンロードアプリです。</textarea>
     </div>
 
-    <div class="controls-grid">
-        <div class="input-group">
-            <label for="voiceSelect">音声選択</label>
-            <select id="voiceSelect"></select>
-        </div>
-        <div class="input-group">
-            <label for="rateInput">読み上げ速度 (<span id="rateVal">1.0</span>x)</label>
-            <div class="slider-container">
-                <input type="range" id="rateInput" min="0.5" max="2.0" step="0.1" value="1.0">
-                <span class="value-display" id="rateValText">1.0</span>
-            </div>
-        </div>
+    <div class="input-group">
+        <label for="voiceSelect">音声選択</label>
+        <select id="voiceSelect"></select>
     </div>
 
     <div class="btn-group">
-        <button id="playBtn" class="btn-primary">再生</button>
-        <button id="pauseBtn" class="btn-secondary" disabled>一時停止</button>
-        <button id="stopBtn" class="btn-secondary" disabled>停止</button>
+        <button id="playBtn" class="btn-play">再生</button>
+        <button id="pauseBtn" class="btn-other" disabled>一時停止</button>
+        <button id="stopBtn" class="btn-other" disabled>停止</button>
     </div>
 
-    <div class="download-section">
-        <button id="downloadWavBtn" class="btn-primary" style="width: 100%;">WAV形式でダウンロード</button>
+    <div class="input-group">
+        <button id="downloadWavBtn" class="btn-download">WAV形式でダウンロード</button>
     </div>
 
     <div id="status" class="status"></div>
@@ -201,13 +106,9 @@
 <script>
     const textInput = document.getElementById('textInput');
     const voiceSelect = document.getElementById('voiceSelect');
-    const rateInput = document.getElementById('rateInput');
-    const rateValText = document.getElementById('rateValText');
-    
     const playBtn = document.getElementById('playBtn');
     const pauseBtn = document.getElementById('pauseBtn');
     const stopBtn = document.getElementById('stopBtn');
-    
     const downloadWavBtn = document.getElementById('downloadWavBtn');
     const statusDiv = document.getElementById('status');
 
@@ -216,7 +117,6 @@
     function loadVoices() {
         voices = window.speechSynthesis.getVoices();
         voiceSelect.innerHTML = '';
-        
         voices.forEach((voice, index) => {
             const option = document.createElement('option');
             option.value = index;
@@ -233,40 +133,27 @@
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    rateInput.addEventListener('input', () => {
-        rateValText.textContent = rateInput.value;
-    });
-
-    // 再生ボタン
     playBtn.addEventListener('click', () => {
         if (window.speechSynthesis.speaking && window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
-            updateButtonState(true);
+            updateState(true);
             return;
         }
-
         window.speechSynthesis.cancel();
         const text = textInput.value;
         if (!text) return;
 
         const utterance = new SpeechSynthesisUtterance(text);
-        const selectedVoice = voices[voiceSelect.value];
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
+        if (voices[voiceSelect.value]) {
+            utterance.voice = voices[voiceSelect.value];
         }
-        utterance.rate = parseFloat(rateInput.value);
-
-        utterance.onstart = () => updateButtonState(true);
-        utterance.onend = () => updateButtonState(false);
-        utterance.onerror = () => {
-            updateButtonState(false);
-            statusDiv.textContent = "再生エラーが発生しました。";
-        };
+        utterance.onstart = () => updateState(true);
+        utterance.onend = () => updateState(false);
+        utterance.onerror = () => updateState(false);
 
         window.speechSynthesis.speak(utterance);
     });
 
-    // 一時停止ボタン
     pauseBtn.addEventListener('click', () => {
         if (window.speechSynthesis.speaking) {
             window.speechSynthesis.pause();
@@ -277,41 +164,33 @@
         }
     });
 
-    // 停止ボタン
     stopBtn.addEventListener('click', () => {
         window.speechSynthesis.cancel();
-        updateButtonState(false);
+        updateState(false);
     });
 
-    function updateButtonState(isPlaying) {
+    function updateState(isPlaying) {
         playBtn.disabled = isPlaying;
         pauseBtn.disabled = !isPlaying;
         stopBtn.disabled = !isPlaying;
-        if (!isPlaying) {
-            pauseBtn.textContent = "一時停止";
-        }
+        if (!isPlaying) pauseBtn.textContent = "一時停止";
     }
 
-    // 音声をキャプチャしてAudioBufferを取得する処理
-    async function getSpeechAudioBuffer(text, voiceIndex, rate) {
+    async function getAudioBuffer(text, voiceIndex) {
         return new Promise((resolve, reject) => {
-            if (!('webkitAudioContext' in window) && !('AudioContext' in window)) {
-                return reject(new Error('Web Audio APIがサポートされていません。'));
-            }
-            
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const dest = audioCtx.createMediaStreamDestination();
             const mediaRecorder = new MediaRecorder(dest.stream);
             const chunks = [];
-            
+
             mediaRecorder.ondataavailable = e => chunks.push(e.data);
             mediaRecorder.onstop = async () => {
                 try {
-                    const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+                    const blob = new Blob(chunks, { type: 'audio/webm' });
                     const arrayBuffer = await blob.arrayBuffer();
-                    const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
                     audioCtx.close();
-                    resolve(decodedBuffer);
+                    resolve(decoded);
                 } catch (err) {
                     audioCtx.close();
                     reject(err);
@@ -319,33 +198,24 @@
             };
 
             const utterance = new SpeechSynthesisUtterance(text);
-            if (voices[voiceIndex]) {
-                utterance.voice = voices[voiceIndex];
-            }
-            utterance.rate = rate;
+            if (voices[voiceIndex]) utterance.voice = voices[voiceIndex];
 
             mediaRecorder.start();
             window.speechSynthesis.cancel();
             window.speechSynthesis.speak(utterance);
-            
+
             utterance.onend = () => {
                 setTimeout(() => {
-                    if (mediaRecorder.state === 'recording') {
-                        mediaRecorder.stop();
-                    }
+                    if (mediaRecorder.state === 'recording') mediaRecorder.stop();
                 }, 200);
             };
-
             utterance.onerror = (e) => {
-                if (mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                }
+                if (mediaRecorder.state === 'recording') mediaRecorder.stop();
                 reject(e);
             };
         });
     }
 
-    // WAVダウンロード処理
     downloadWavBtn.addEventListener('click', async () => {
         const text = textInput.value;
         if (!text) {
@@ -357,26 +227,25 @@
         downloadWavBtn.disabled = true;
 
         try {
-            const audioBuffer = await getSpeechAudioBuffer(text, voiceSelect.value, parseFloat(rateInput.value));
-            const wavBlob = audioBufferToWav(audioBuffer);
+            const buffer = await getAudioBuffer(text, voiceSelect.value);
+            const wavBlob = audioBufferToWav(buffer);
             
             const url = URL.createObjectURL(wavBlob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `voice_${new Date().toISOString().slice(0,19).replace(/[-:]/g,"")}.wav`;
+            a.download = `voice_${Date.now()}.wav`;
             a.click();
             URL.revokeObjectURL(url);
             
             statusDiv.textContent = "WAVファイルのダウンロードが完了しました！";
         } catch (err) {
             console.error(err);
-            statusDiv.textContent = "生成に失敗しました。もう一度お試しください。";
+            statusDiv.textContent = "生成に失敗しました。";
         } finally {
             downloadWavBtn.disabled = false;
         }
     });
 
-    // AudioBufferを正しいWAV形式（PCM）のBlobに変換する関数
     function audioBufferToWav(buffer) {
         const numOfChan = buffer.numberChannels;
         const length = buffer.length * numOfChan * 2 + 44;
@@ -387,20 +256,10 @@
         let pos = 0;
 
         function writeString(str) {
-            for (let i = 0; i < str.length; i++) {
-                out.setUint8(pos++, str.charCodeAt(i));
-            }
+            for (let i = 0; i < str.length; i++) out.setUint8(pos++, str.charCodeAt(i));
         }
-
-        function setUint16(data) {
-            out.setUint16(pos, data, true);
-            pos += 2;
-        }
-
-        function setUint32(data) {
-            out.setUint32(pos, data, true);
-            pos += 4;
-        }
+        function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
+        function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
 
         writeString('RIFF');
         setUint32(length - 8);
@@ -429,7 +288,6 @@
             }
             offset++;
         }
-
         return new Blob([out.buffer], { type: 'audio/wav' });
     }
 </script>
