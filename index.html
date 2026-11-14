@@ -108,37 +108,58 @@ function toMp3(samples) {
   return new Blob(parts, { type: 'audio/mpeg' });
 }
 
+async function requestAudio(prompt, key) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent($('model').value.trim())}:generateContent`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: $('voice').value } } }
+      }
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+  const b64 = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+  if (!b64) throw new Error('音声データが返ってきませんでした。テキストや話し方の指示を変えて再度お試しください。');
+  return b64;
+}
+
 async function generate() {
   const key = $('apiKey').value.trim();
   const text = $('textInput').value.trim();
   if (!key) return setStatus('APIキーを入力してください。', true);
+  if (!/^[\x21-\x7E]+$/.test(key)) return setStatus('APIキーに全角文字や空白、日本語が含まれています。AI Studioに表示されたキー（AIza…で始まる英数字）だけをコピーして貼り直してください。', true);
   if (!text) return setStatus('テキストを入力してください。', true);
   try { localStorage.setItem('gemini_key', key); } catch (e) {}
 
   const style = $('style').value.trim();
-  const prompt = style ? `${style}：${text}` : text;
+  // TTSモデルが「文章を生成しようとする」エラーを避けるため、読み上げ指示を明示する
+  const prompts = [
+    style ? `Say ${style}: ${text}` : `Say: ${text}`,
+    `Read the following transcript aloud exactly as written. Output audio only.\nTranscript: ${text}`
+  ];
 
   $('go').disabled = true;
   $('dl').style.display = 'none';
   setStatus('音声を生成中…（数秒〜数十秒かかります）');
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent($('model').value.trim())}:generateContent`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ['AUDIO'],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: $('voice').value } } }
-        }
-      })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
-    const b64 = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-    if (!b64) throw new Error('音声データが返ってきませんでした。テキストや話し方の指示を変えて再度お試しください。');
+    let b64 = null, lastErr = null;
+    for (const prompt of prompts) {
+      try {
+        b64 = await requestAudio(prompt, key);
+        break;
+      } catch (e) {
+        lastErr = e;
+        if (!/only be used for TTS|generate text/i.test(e.message)) throw e; // 別のエラーなら再試行しない
+        setStatus('読み上げ指示を変えて再試行中…');
+      }
+    }
+    if (!b64) throw lastErr || new Error('音声データが返ってきませんでした。');
 
     pcm = b64ToInt16(b64);
     buildOutput();
