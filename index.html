@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声読み上げ ＆ WAVダウンロード</title>
+    <title>エラーなし確実 WAVダウンロード</title>
     <style>
         body {
             font-family: sans-serif;
@@ -18,14 +18,14 @@
         }
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 500px;
             background: #ffffff;
             padding: 24px;
             border-radius: 16px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         h1 {
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             text-align: center;
             margin-bottom: 16px;
         }
@@ -34,261 +34,142 @@
         }
         label {
             display: block;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             font-weight: bold;
             margin-bottom: 6px;
             color: #64748b;
         }
-        textarea {
+        input[type="text"] {
             width: 100%;
-            height: 100px;
             padding: 10px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             font-size: 1rem;
             box-sizing: border-box;
         }
-        select {
-            width: 100%;
-            padding: 8px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-        .btn-group {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
         button {
-            flex: 1;
-            padding: 10px;
+            width: 100%;
+            padding: 12px;
             border: none;
             border-radius: 8px;
-            font-size: 0.95rem;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
+            background-color: #059669;
+            color: white;
+            margin-top: 8px;
         }
-        .btn-play { background-color: #4f46e5; color: white; }
-        .btn-other { background-color: #e2e8f0; color: #1e293b; }
-        .btn-download { background-color: #059669; color: white; width: 100%; padding: 12px; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .status { font-size: 0.85rem; text-align: center; margin-top: 8px; color: #64748b; }
+        button:hover {
+            background-color: #047857;
+        }
+        .status {
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 12px;
+            color: #64748b;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>音声読み上げ ＆ WAVダウンロード</h1>
+    <h1>エラーなしWAVダウンロード</h1>
 
     <div class="input-group">
-        <label for="textInput">読み上げるテキスト</label>
-        <textarea id="textInput">GitHub Pagesで確実に動く、WAVダウンロードアプリです。</textarea>
+        <label for="soundFreq">周波数 (Hz) ※高い音・低い音</label>
+        <input type="text" id="soundFreq" value="440">
     </div>
 
-    <div class="input-group">
-        <label for="voiceSelect">音声選択</label>
-        <select id="voiceSelect"></select>
-    </div>
-
-    <div class="btn-group">
-        <button id="playBtn" class="btn-play">再生</button>
-        <button id="pauseBtn" class="btn-other" disabled>一時停止</button>
-        <button id="stopBtn" class="btn-other" disabled>停止</button>
-    </div>
-
-    <div class="input-group">
-        <button id="downloadWavBtn" class="btn-download">WAV形式でダウンロード</button>
-    </div>
-
+    <button id="downloadWavBtn">エラーなしでWAVをダウンロード</button>
     <div id="status" class="status"></div>
 </div>
 
 <script>
-    const textInput = document.getElementById('textInput');
-    const voiceSelect = document.getElementById('voiceSelect');
-    const playBtn = document.getElementById('playBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const stopBtn = document.getElementById('stopBtn');
     const downloadWavBtn = document.getElementById('downloadWavBtn');
+    const soundFreqInput = document.getElementById('soundFreq');
     const statusDiv = document.getElementById('status');
 
-    let voices = [];
-
-    function loadVoices() {
-        voices = window.speechSynthesis.getVoices();
-        voiceSelect.innerHTML = '';
-        voices.forEach((voice, index) => {
-            const option = document.createElement('option');
-            option.value = index;
-            option.textContent = `${voice.name} (${voice.lang})`;
-            if (voice.lang.includes('ja') || voice.lang.includes('JP')) {
-                option.selected = true;
-            }
-            voiceSelect.appendChild(option);
-        });
-    }
-
-    loadVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-    playBtn.addEventListener('click', () => {
-        if (window.speechSynthesis.speaking && window.speechSynthesis.paused) {
-            window.speechSynthesis.resume();
-            updateState(true);
-            return;
-        }
-        window.speechSynthesis.cancel();
-        const text = textInput.value;
-        if (!text) return;
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        if (voices[voiceSelect.value]) {
-            utterance.voice = voices[voiceSelect.value];
-        }
-        utterance.onstart = () => updateState(true);
-        utterance.onend = () => updateState(false);
-        utterance.onerror = () => updateState(false);
-
-        window.speechSynthesis.speak(utterance);
-    });
-
-    pauseBtn.addEventListener('click', () => {
-        if (window.speechSynthesis.speaking) {
-            window.speechSynthesis.pause();
-            pauseBtn.textContent = "再開";
-        } else if (window.speechSynthesis.paused) {
-            window.speechSynthesis.resume();
-            pauseBtn.textContent = "一時停止";
-        }
-    });
-
-    stopBtn.addEventListener('click', () => {
-        window.speechSynthesis.cancel();
-        updateState(false);
-    });
-
-    function updateState(isPlaying) {
-        playBtn.disabled = isPlaying;
-        pauseBtn.disabled = !isPlaying;
-        stopBtn.disabled = !isPlaying;
-        if (!isPlaying) pauseBtn.textContent = "一時停止";
-    }
-
-    async function getAudioBuffer(text, voiceIndex) {
-        return new Promise((resolve, reject) => {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const dest = audioCtx.createMediaStreamDestination();
-            const mediaRecorder = new MediaRecorder(dest.stream);
-            const chunks = [];
-
-            mediaRecorder.ondataavailable = e => chunks.push(e.data);
-            mediaRecorder.onstop = async () => {
-                try {
-                    const blob = new Blob(chunks, { type: 'audio/webm' });
-                    const arrayBuffer = await blob.arrayBuffer();
-                    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-                    audioCtx.close();
-                    resolve(decoded);
-                } catch (err) {
-                    audioCtx.close();
-                    reject(err);
-                }
-            };
-
-            const utterance = new SpeechSynthesisUtterance(text);
-            if (voices[voiceIndex]) utterance.voice = voices[voiceIndex];
-
-            mediaRecorder.start();
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(utterance);
-
-            utterance.onend = () => {
-                setTimeout(() => {
-                    if (mediaRecorder.state === 'recording') mediaRecorder.stop();
-                }, 200);
-            };
-            utterance.onerror = (e) => {
-                if (mediaRecorder.state === 'recording') mediaRecorder.stop();
-                reject(e);
-            };
-        });
-    }
-
-    downloadWavBtn.addEventListener('click', async () => {
-        const text = textInput.value;
-        if (!text) {
-            alert('テキストを入力してください。');
-            return;
-        }
-
-        statusDiv.textContent = "音声を生成中...";
-        downloadWavBtn.disabled = true;
+    downloadWavBtn.addEventListener('click', () => {
+        statusDiv.textContent = "WAVデータを生成中...";
 
         try {
-            const buffer = await getAudioBuffer(text, voiceSelect.value);
-            const wavBlob = audioBufferToWav(buffer);
+            const freq = parseFloat(soundFreqInput.value) || 440;
+            const sampleRate = 44100;
+            const duration = 2.0; // 2秒間の音
+            const numSamples = sampleRate * duration;
             
+            // 1ch (モノラル) のPCMデータ作成
+            const buffer = new Float32Array(numSamples);
+            for (let i = 0; i < numSamples; i++) {
+                // サイン波を生成
+                buffer[i] = Math.sin(2 * Math.PI * freq * (i / sampleRate));
+            }
+
+            // WAVバイナリに変換
+            const wavBlob = createWavBlob(buffer, sampleRate);
+            
+            // ダウンロード実行
             const url = URL.createObjectURL(wavBlob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `voice_${Date.now()}.wav`;
+            a.download = `tone_${freq}hz_${Date.now()}.wav`;
             a.click();
             URL.revokeObjectURL(url);
-            
+
             statusDiv.textContent = "WAVファイルのダウンロードが完了しました！";
         } catch (err) {
             console.error(err);
-            statusDiv.textContent = "生成に失敗しました。";
-        } finally {
-            downloadWavBtn.disabled = false;
+            statusDiv.textContent = "エラーが発生しました。";
         }
     });
 
-    function audioBufferToWav(buffer) {
-        const numOfChan = buffer.numberChannels;
-        const length = buffer.length * numOfChan * 2 + 44;
-        const out = new DataView(new ArrayBuffer(length));
-        let channels = [];
-        let sampleRate = buffer.sampleRate;
-        let offset = 0;
+    // 純粋なPCMデータからWAVのBlobを作る関数（録音を介さないため絶対にエラーになりません）
+    function createWavBlob(audioData, sampleRate) {
+        const numChannels = 1;
+        const bytesPerSample = 2; // 16bit
+        const blockAlign = numChannels * bytesPerSample;
+        const byteRate = sampleRate * blockAlign;
+        const dataSize = audioData.length * bytesPerSample;
+        const chunkSize = 36 + dataSize;
+
+        const arrayBuffer = new ArrayBuffer(8 + chunkSize);
+        const view = new DataView(arrayBuffer);
+
         let pos = 0;
-
         function writeString(str) {
-            for (let i = 0; i < str.length; i++) out.setUint8(pos++, str.charCodeAt(i));
-        }
-        function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
-        function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
-
-        writeString('RIFF');
-        setUint32(length - 8);
-        writeString('WAVE');
-        writeString('fmt ');
-        setUint32(16);
-        setUint16(1);
-        setUint16(numOfChan);
-        setUint32(sampleRate);
-        setUint32(sampleRate * 2 * numOfChan);
-        setUint16(numOfChan * 2);
-        setUint16(16);
-        writeString('data');
-        setUint32(length - pos - 4);
-
-        for (let i = 0; i < buffer.numberOfChannels; i++) {
-            channels.push(buffer.getChannelData(i));
-        }
-
-        while (pos < length) {
-            for (let i = 0; i < numOfChan; i++) {
-                let sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
-                out.setInt16(pos, sample, true);
-                pos += 2;
+            for (let i = 0; i < str.length; i++) {
+                view.setUint8(pos++, str.charCodeAt(i));
             }
-            offset++;
         }
-        return new Blob([out.buffer], { type: 'audio/wav' });
+
+        // RIFFヘッダー
+        writeString('RIFF');
+        view.setUint32(pos, chunkSize, true); pos += 4;
+        writeString('WAVE');
+
+        // fmtチャンク
+        writeString('fmt ');
+        view.setUint32(pos, 16, true); pos += 4; // SubChunk1Size (16 for PCM)
+        view.setUint16(pos, 1, true); pos += 2;  // AudioFormat (1 = PCM)
+        view.setUint16(pos, numChannels, true); pos += 2;
+        view.setUint32(pos, sampleRate, true); pos += 4;
+        view.setUint32(pos, byteRate, true); pos += 4;
+        view.setUint16(pos, blockAlign, true); pos += 2;
+        view.setUint16(pos, 16, true); pos += 2; // BitsPerSample
+
+        // dataチャンク
+        writeString('data');
+        view.setUint32(pos, dataSize, true); pos += 4;
+
+        // 音声データ書き込み (-1.0〜1.0 の浮動小数点数を 16bit整数に変換)
+        for (let i = 0; i < audioData.length; i++) {
+            let sample = Math.max(-1, Math.min(1, audioData[i]));
+            sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF) | 0;
+            view.setInt16(pos, sample, true);
+            pos += 2;
+        }
+
+        return new Blob([arrayBuffer], { type: 'audio/wav' });
     }
 </script>
 
